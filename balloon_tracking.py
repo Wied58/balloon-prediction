@@ -4,26 +4,28 @@ from geopy.distance import geodesic
 import matplotlib.pyplot as plt
 
 # Convert degrees, minutes, direction to decimal degrees
-def convert_to_decimal(degrees, direction):
-    decimal = abs(degrees)  # Ensure positive before applying direction
-    if direction in ["S", "W"]:
-        decimal *= -1  # South and West are negative
-    return decimal
+def convert_ddmm_to_decimal(ddmm):
+    degrees = int(abs(ddmm) / 100)  # Extract degrees (first two or three digits)
+    minutes = abs(ddmm) % 100  # Extract minutes (remaining decimal part)
+    decimal = degrees + minutes / 60
+    return -decimal if ddmm < 0 else decimal  # Keep original sign
+
 
 # Load ascent data from CSV and process coordinates
 def load_flight_data(csv_file):
     df = pd.read_csv(csv_file)
 
-    # Convert lat/lon to decimal degrees
-    df["latitude"] = df.apply(lambda row: convert_to_decimal(row["LAT"], row["LAT_DIR"]), axis=1)
-    df["longitude"] = df.apply(lambda row: convert_to_decimal(row["LONG"], row["LONG_DIR"]), axis=1)
+    # Convert from DDMM.MMMMM format to Decimal Degrees
+    df["latitude"] = df["LAT"].apply(convert_ddmm_to_decimal)
+    df["longitude"] = df["LONG"].apply(convert_ddmm_to_decimal)
 
     # Drop old columns
-    df.drop(columns=["LAT", "LAT_DIR", "LONG", "LONG_DIR"], inplace=True)
+    df.drop(columns=["LAT", "LONG"], inplace=True)
 
-    # Ensure altitude is in ascending order
+    # Ensure altitude is sorted in ascending order
     df = df.sort_values(by="ALT", ascending=True)
     return df
+
 
 
 # Simulate descent using wind drift
@@ -45,7 +47,7 @@ def simulate_descent(df, parachute_diameter, default_wind_speed=5):
 # Plot flight path
 def plot_flight_path(df, landing_coords):
     plt.figure(figsize=(8, 6))
-    plt.scatter(df["longitude"], df["latitude"], c=df["altitude"], cmap="viridis", label="Ascent Path")
+    plt.scatter(df["longitude"], df["latitude"], c=df["ALT"], cmap="viridis", label="Ascent Path")
     plt.scatter(landing_coords[1], landing_coords[0], color="red", marker="X", s=100, label="Predicted Landing")
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
