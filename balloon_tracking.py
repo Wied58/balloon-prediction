@@ -4,8 +4,8 @@ from geopy.distance import geodesic
 import matplotlib.pyplot as plt
 
 # Convert degrees, minutes, direction to decimal degrees
-def convert_to_decimal(degrees, minutes, direction):
-    decimal = degrees + minutes / 60
+def convert_to_decimal(degrees, direction):
+    decimal = abs(degrees)  # Ensure positive before applying direction
     if direction in ["S", "W"]:
         decimal *= -1  # South and West are negative
     return decimal
@@ -15,21 +15,21 @@ def load_flight_data(csv_file):
     df = pd.read_csv(csv_file)
 
     # Convert lat/lon to decimal degrees
-    df["latitude"] = df.apply(lambda row: convert_to_decimal(row["latitude_degrees"], row["latitude_minutes"], row["latitude_direction"]), axis=1)
-    df["longitude"] = df.apply(lambda row: convert_to_decimal(row["longitude_degrees"], row["longitude_minutes"], row["longitude_direction"]), axis=1)
+    df["latitude"] = df.apply(lambda row: convert_to_decimal(row["LAT"], row["LAT_DIR"]), axis=1)
+    df["longitude"] = df.apply(lambda row: convert_to_decimal(row["LONG"], row["LONG_DIR"]), axis=1)
 
     # Drop old columns
-    df.drop(columns=["latitude_degrees", "latitude_minutes", "latitude_direction",
-                     "longitude_degrees", "longitude_minutes", "longitude_direction"], inplace=True)
+    df.drop(columns=["LAT", "LAT_DIR", "LONG", "LONG_DIR"], inplace=True)
 
     # Ensure altitude is in ascending order
-    df = df.sort_values(by="altitude", ascending=True)
+    df = df.sort_values(by="ALT", ascending=True)
     return df
+
 
 # Simulate descent using wind drift
 def simulate_descent(df, parachute_diameter, default_wind_speed=5):
     peak = df.iloc[-1]  # Last row is peak altitude
-    lat, lon, alt = peak["latitude"], peak["longitude"], peak["altitude"]
+    lat, lon, alt = peak["latitude"], peak["longitude"], peak["ALT"]
 
     descent_rate = 5  # m/s (adjust based on parachute size)
     time_to_ground = alt / descent_rate  # Total descent time in seconds
