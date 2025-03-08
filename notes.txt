@@ -1,9 +1,15 @@
 
 awk -F"," '{print $8","$1","$2","$3","$4","$5","$6}' balloon_data.raw > test_data.csv
 
-1. What is up with alt scal on graph
+1. What is up with alt scale on graph
 2. graph descent path
 3. get output in same format as input file
+4. Can we get real time predictions during descent?
+5. plot map
+6. plot altitude
+
+
+
 
 
 
