@@ -3,10 +3,27 @@ import numpy as np
 from geopy.distance import geodesic
 import matplotlib.pyplot as plt
 
-# Load ascent data from CSV
+# Convert degrees, minutes, direction to decimal degrees
+def convert_to_decimal(degrees, minutes, direction):
+    decimal = degrees + minutes / 60
+    if direction in ["S", "W"]:
+        decimal *= -1  # South and West are negative
+    return decimal
+
+# Load ascent data from CSV and process coordinates
 def load_flight_data(csv_file):
     df = pd.read_csv(csv_file)
-    df = df.sort_values(by="altitude", ascending=True)  # Ensure altitude is in ascending order
+
+    # Convert lat/lon to decimal degrees
+    df["latitude"] = df.apply(lambda row: convert_to_decimal(row["latitude_degrees"], row["latitude_minutes"], row["latitude_direction"]), axis=1)
+    df["longitude"] = df.apply(lambda row: convert_to_decimal(row["longitude_degrees"], row["longitude_minutes"], row["longitude_direction"]), axis=1)
+
+    # Drop old columns
+    df.drop(columns=["latitude_degrees", "latitude_minutes", "latitude_direction",
+                     "longitude_degrees", "longitude_minutes", "longitude_direction"], inplace=True)
+
+    # Ensure altitude is in ascending order
+    df = df.sort_values(by="altitude", ascending=True)
     return df
 
 # Simulate descent using wind drift
