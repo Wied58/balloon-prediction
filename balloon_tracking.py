@@ -54,9 +54,10 @@ def plot_flight_path(df, landing_coords):
     plt.colorbar(label="Altitude (m)")
     plt.show()
 
+# parachust choices are 6, 9, and 12 feet but probably 9 or 274.32
 # Run simulation
-csv_file = "previous_flight.csv"  # Replace with your file path
-parachute_diameter = 100  # cm
+csv_file = "test_data.csv"  # Replace with your file path
+parachute_diameter =  274.32 # 9 feet in cm
 df = load_flight_data(csv_file)
 landing_coords = simulate_descent(df, parachute_diameter)
 print(f"Predicted Landing Coordinates: {landing_coords}")
