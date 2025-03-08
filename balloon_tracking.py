@@ -3,28 +3,58 @@ import numpy as np
 from geopy.distance import geodesic
 import matplotlib.pyplot as plt
 
-# Convert degrees, minutes, direction to decimal degrees
+# Convert DDMM.MMMMM to Decimal Degrees
 def convert_ddmm_to_decimal(ddmm):
-    degrees = int(abs(ddmm) / 100)  # Extract degrees (first two or three digits)
-    minutes = abs(ddmm) % 100  # Extract minutes (remaining decimal part)
+    degrees = int(abs(ddmm) / 100)  # Extract degrees
+    minutes = abs(ddmm) % 100  # Extract minutes
     decimal = degrees + minutes / 60
     return -decimal if ddmm < 0 else decimal  # Keep original sign
 
+# Convert DATE (DDMMYY) to YYYY-MM-DD
+def convert_date(ddmmyy):
+    day = int(ddmmyy[:2])
+    month = int(ddmmyy[2:4])
+    year = int(ddmmyy[4:6]) + 2000  # Assuming 20XX
+    return f"{year:04d}-{month:02d}-{day:02d}"
 
-# Load ascent data from CSV and process coordinates
+# Convert TIME (HHMMSS.S) to HH:MM:SS
+def convert_time(hhmmss):
+    hhmmss = str(int(float(hhmmss)))  # Remove decimals
+    hours = hhmmss.zfill(6)[:2]  # Ensure 2 digits
+    minutes = hhmmss.zfill(6)[2:4]
+    seconds = hhmmss.zfill(6)[4:6]
+    return f"{hours}:{minutes}:{seconds}"
+
+
+# Load and process CSV
 def load_flight_data(csv_file):
     df = pd.read_csv(csv_file)
 
-    # Convert from DDMM.MMMMM format to Decimal Degrees
+    # Convert lat/lon from DDMM.MMMMM format
     df["latitude"] = df["LAT"].apply(convert_ddmm_to_decimal)
     df["longitude"] = df["LONG"].apply(convert_ddmm_to_decimal)
 
-    # Drop old columns
-    df.drop(columns=["LAT", "LONG"], inplace=True)
+    # Drop unnecessary columns
+    df.drop(columns=["LAT", "LAT_DIR", "LONG", "LONG_DIR"], inplace=True)
 
-    # Ensure altitude is sorted in ascending order
-    df = df.sort_values(by="ALT", ascending=True)
-    return df
+    # Convert DATE and TIME to proper format
+    df["DATE"] = df["DATE"].astype(str).apply(convert_date)
+    df["TIME"] = df["TIME"].astype(str).apply(convert_time)
+
+    # Create TIMESTAMP column
+    df["TIMESTAMP"] = pd.to_datetime(df["DATE"] + " " + df["TIME"], format="%Y-%m-%d %H:%M:%S")
+
+    # Sort by timestamp
+    df = df.sort_values(by="TIMESTAMP", ascending=True)
+
+    # Find peak altitude (highest point)
+    peak_index = df["ALT"].idxmax()
+
+    # Keep only ascent data (everything before peak altitude)
+    df_ascent = df.loc[:peak_index]
+
+    return df_ascent
+
 
 
 
