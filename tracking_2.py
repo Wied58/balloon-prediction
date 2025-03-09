@@ -1,72 +1,59 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import savgol_filter
 
-df = pd.read_csv("test_data.csv", dtype={"DATE": str, "TIME": str})  # Ensure DATE and TIME are read as strings
+# Load and parse CSV
+df = pd.read_csv("test_data.csv", dtype={"DATE": str, "TIME": str})
 
-# Convert DATE (DDMMYY) to YYYY-MM-DD
+# Ensure DATE and TIME are read as strings
+df["DATE"] = df["DATE"].astype(str)
+df["TIME"] = df["TIME"].astype(str).str.split('.').str[0]  # Remove decimals
 df["formatted_date"] = pd.to_datetime(df["DATE"], format="%d%m%y").dt.strftime("%Y-%m-%d")
-
-# Ensure TIME is a string and remove any decimals
-df["TIME"] = df["TIME"].astype(str).str.split('.').str[0]  # Remove any decimal places if present
-
-# Extract HH:MM:SS from TIME (HHMMSS)
 df["formatted_time"] = df["TIME"].apply(lambda x: f"{x[:2]}:{x[2:4]}:{x[4:6]}")
-
-# Merge and parse timestamp
 df["timestamp"] = pd.to_datetime(df["formatted_date"] + " " + df["formatted_time"])
+df["ALT"] = pd.to_numeric(df["ALT"], errors="coerce")  # Ensure altitude is numeric
+df = df.drop(columns=["formatted_date", "formatted_time"])  # Clean up
 
-# Drop unnecessary columns
-df = df.drop(columns=["formatted_date", "formatted_time"])
+# Apply a rolling average to smooth altitude data
+df['smoothed_ALT'] = df['ALT'].rolling(window=10, center=True).mean()
 
-# end of date time mess
+# Calculate the ascent rate (change in altitude over time)
+df["ascent_rate"] = df["smoothed_ALT"].diff() / df["timestamp"].diff().dt.total_seconds()
 
-# Convert ALT to numeric
-df["ALT"] = pd.to_numeric(df["ALT"], errors="coerce")
+# Define thresholds
+ascent_threshold = 5.0  # meters per second
+descent_threshold = -5.0  # meters per second
 
-# Sort by timestamp
-df = df.sort_values("timestamp").reset_index(drop=True)
+# Detect launch: first significant increase in ascent rate
+launch_index = df[df["ascent_rate"] > ascent_threshold].index.min()
 
-# Compute time differences (in seconds)
-df["time_diff"] = df["timestamp"].diff().dt.total_seconds()
-#df["time_diff"].fillna(1, inplace=True)  # Replace NaN with 1s for first row
-df["time_diff"] = df["time_diff"].fillna(1)
+# Detect peak: maximum altitude point
+peak_index = df["smoothed_ALT"].idxmax()
 
-# Compute vertical velocity (m/s)
-df["vertical_velocity"] = df["ALT"].diff() / df["time_diff"]
+# Detect landing: first point after peak where altitude stabilizes near ground level
+landing_index = df[(df.index > peak_index) & (df["smoothed_ALT"] < 300)].index.min()
 
-# Apply Savitzky-Golay filter for smoothing
-df["smoothed_velocity"] = savgol_filter(df["vertical_velocity"], window_length=11, polyorder=2)
+# Extract timestamps for key events
+launch_time = df.loc[launch_index, 'timestamp'] if pd.notna(launch_index) else None
+peak_time = df.loc[peak_index, 'timestamp'] if pd.notna(peak_index) else None
+landing_time = df.loc[landing_index, 'timestamp'] if pd.notna(landing_index) else None
 
-# Detect takeoff: When vertical velocity becomes significantly positive
-takeoff_index = df[df["smoothed_velocity"] > 1].index[0]  # Adjust threshold if needed
+print(f"Launch Timestamp: {launch_time}")
+print(f"Peak Timestamp: {peak_time}")
+print(f"Landing Timestamp: {landing_time}")
 
-# Detect landing: When vertical velocity stabilizes near zero for a sustained period
-landing_index = df[(df["smoothed_velocity"].abs() < 0.5)].index[-1]  # Adjust threshold if needed
-
-# Trim dataset to flight phase
-flight_df = df.loc[takeoff_index:landing_index]
-
-# Plot altitude vs. timestamp
-plt.figure(figsize=(10, 5))
-plt.plot(df["timestamp"], df["ALT"], label="Raw Altitude", color="gray", alpha=0.5)
-plt.plot(flight_df["timestamp"], flight_df["ALT"], label="Flight Phase", color="blue")
-plt.xlabel("Time")
-plt.ylabel("Altitude (m)")
-plt.title("Weather Balloon Altitude Profile")
+# Plot altitude profile with key events
+plt.figure(figsize=(12, 6))
+plt.plot(df['timestamp'], df['smoothed_ALT'], label='Smoothed Altitude (m)', color='gray', alpha=0.7)
+if launch_time:
+    plt.axvline(x=launch_time, color='green', linestyle='--', label='Launch')
+if peak_time:
+    plt.axvline(x=peak_time, color='blue', linestyle='--', label='Peak')
+if landing_time:
+    plt.axvline(x=landing_time, color='red', linestyle='--', label='Landing')
+plt.xlabel('Time')
+plt.ylabel('Altitude (m)')
+plt.title('Weather Balloon Flight Altitude Profile')
 plt.legend()
-plt.grid()
-plt.show()
-
-# Plot vertical velocity for reference
-plt.figure(figsize=(10, 3))
-plt.plot(df["timestamp"], df["smoothed_velocity"], label="Smoothed Vertical Velocity", color="red")
-plt.axhline(y=1, color="green", linestyle="--", label="Takeoff Threshold")
-plt.axhline(y=-0.5, color="purple", linestyle="--", label="Landing Threshold")
-plt.xlabel("Time")
-plt.ylabel("Vertical Velocity (m/s)")
-plt.title("Vertical Velocity Profile")
-plt.legend()
-plt.grid()
+plt.grid(True)
 plt.show()
