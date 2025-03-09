@@ -4,7 +4,7 @@ awk -F"," '{print $8","$1","$2","$3","$4","$5","$6}' balloon_data.raw > test_dat
 1. What is up with alt scale on graph
 2. graph descent path
 3. get output in same format as input file
-4. Can we get real time predictions during descent?
+4. Can we get real time predictions during descent? - Would you like a real-time tracker for descent updates?
 5. plot map
 6. plot altitude
 
@@ -12,6 +12,13 @@ awk -F"," '{print $8","$1","$2","$3","$4","$5","$6}' balloon_data.raw > test_dat
 
 
 
+*******************************************
 
+2nd try iterative development
+
+
+1. Have timestamp, lat long and alt data from a weather balloon flight the data recorder was started before the balloon was released and long after the balloon landed and it may have traveled in a vehicle this loeaving a lot of non flight data in the set. I would like to read the csv, trim the non light data, place the results in a pandas from plot alt against the timestamp.
+
+ 
 
 
