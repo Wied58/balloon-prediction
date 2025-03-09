@@ -42,6 +42,21 @@ print(f"Launch Timestamp: {launch_time}")
 print(f"Peak Timestamp: {peak_time}")
 print(f"Landing Timestamp: {landing_time}")
 
+# Separate ascent and descent data
+df_ascent = df.loc[:peak_index].copy()
+df_descent = df.loc[peak_index:].copy()
+
+# Add phase column
+df_ascent["phase"] = "ascent"
+df_descent["phase"] = "descent"
+
+# Concatenate ascent and descent data
+df_combined = pd.concat([df_ascent, df_descent])
+
+# Save the combined DataFrame to a new CSV file
+df_combined.to_csv("ascent_descent_data.csv", index=False)
+
+
 # Plot altitude profile with key events
 plt.figure(figsize=(12, 6))
 plt.plot(df['timestamp'], df['smoothed_ALT'], label='Smoothed Altitude (m)', color='gray', alpha=0.7)
