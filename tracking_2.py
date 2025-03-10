@@ -115,7 +115,6 @@ df_combined = pd.concat([df_ascent, df_descent])
 # Save the combined DataFrame to a new CSV file
 df_combined.to_csv("ascent_descent_data.csv", index=False)
 
-
 # Plot altitude profile with key events
 plt.figure(figsize=(12, 6))
 plt.plot(df['timestamp'], df['smoothed_ALT'], label='Smoothed Altitude (m)', color='gray', alpha=0.7)
@@ -131,3 +130,15 @@ plt.title('Weather Balloon Flight Altitude Profile')
 plt.legend()
 plt.grid(True)
 plt.show()
+
+
+# Plot wind speed against altitude for ascent data
+plt.figure(figsize=(12, 6))
+plt.plot(df_ascent['smoothed_ALT'], df_ascent['speed'], label='Wind Speed (m/s)', color='blue')
+plt.xlabel('Altitude (m)')
+plt.ylabel('Wind Speed (m/s)')
+plt.title('Wind Speed vs Altitude (Ascent)')
+plt.legend()
+plt.grid(True)
+plt.show()
+
